@@ -1,0 +1,9 @@
+{
+  "name": "poc-vulnerable-app",
+  "version": "1.0.0",
+  "description": "App para teste de DevSecOps",
+  "main": "index.js",
+  "dependencies": {
+    "express": "4.16.0" 
+  }
+}

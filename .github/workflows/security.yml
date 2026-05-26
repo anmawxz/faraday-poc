@@ -1,0 +1,64 @@
+name: "DevSecOps Security Pipeline"
+
+on:
+  pull_request:
+    branches: [ main, master, develop ]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security_scans:
+    name: Execute Security Linters
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code Base
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 1. SECRET SCANNING - Gitleaks (Procura chaves vazadas)
+      - name: Run Gitleaks Secret Scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      # 2. SAST - Semgrep OSS (Varre vulnerabilidades no código escrito)
+      - name: Run Semgrep OSS Application Code Scan
+        run: |
+          python3 -m pip install semgrep
+          semgrep scan --config=auto --sarif --output=semgrep-results.sarif
+        continue-on-error: true
+
+      # 3. SCA - Trivy (Vulnerabilidades em bibliotecas e dependências)
+      - name: Run Trivy Dependency Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'HIGH,CRITICAL'
+
+      # 4. CENTRALIZAÇÃO - Upload dos resultados SARIF para o Faraday via Basic Auth
+      - name: Consolidate & Upload SARIF Reports to Faraday Platform
+        if: always()
+        run: |
+          echo "Enviando os relatórios para o painel central do Faraday via API..."          
+          
+          # Envio do relatório Semgrep se existir
+          if [ -f semgrep-results.sarif ]; then
+            curl -X POST "${{ secrets.FARADAY_URL }}/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools/" \
+              -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
+              -F "file=@semgrep-results.sarif"
+          fi
+          
+          # Envio do relatório Trivy se existir
+          if [ -f trivy-results.sarif ]; then
+            curl -X POST "${{ secrets.FARADAY_URL }}/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools/" \
+              -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
+              -F "file=@trivy-results.sarif"
+          fi
