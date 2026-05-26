@@ -1,6 +1,8 @@
 name: "DevSecOps Security Pipeline"
 
 on:
+  push:
+    branches: [ "feature/teste-seguranca", "main", "master" ]
   pull_request:
     branches: [ main, master, develop ]
 
