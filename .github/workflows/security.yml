@@ -21,23 +21,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 1. SECRET SCANNING - Gitleaks (Procura chaves vazadas e gera o relatório SARIF)
+      # 1. SECRET SCANNING - Gitleaks
       - name: Run Gitleaks Secret Scanner
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: detect --redact -v --exit-code=2 --report-format=sarif --report-path=gitleaks-results.sarif
         continue-on-error: true
 
-      # 2. SAST - Semgrep OSS (Varre vulnerabilidades no código escrito)
+      # Como a action padrão gera 'results.sarif' mas pode limpá-lo, pegamos se ele persistir
+      # ou renomeamos se necessário. Para garantir o envio, focamos nos gerados localmente:
+
+      # 2. SAST - Semgrep OSS
       - name: Run Semgrep OSS Application Code Scan
         run: |
           python3 -m pip install semgrep
           semgrep scan --config=auto --sarif --output=semgrep-results.sarif
         continue-on-error: true
 
-      # 3. SCA - Trivy (Vulnerabilidades em bibliotecas e dependências)
+      # 3. SCA - Trivy
       - name: Run Trivy Dependency Security Scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -51,25 +52,31 @@ jobs:
       - name: Consolidate & Upload SARIF Reports to Faraday Platform
         if: always()
         run: |
-          echo "Enviando os relatórios para o painel central do Faraday via API..."          
+          echo "Enviando os relatórios para o painel central do Faraday via API..."
           
-          # Envio do relatório Gitleaks se existir
-          if [ -f gitleaks-results.sarif ]; then
-            curl -X POST "${{ secrets.FARADAY_URL }}/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools" \
+          # Remove barras duplicadas da URL caso a secret termine com '/'
+          BASE_URL=$(echo "${{ secrets.FARADAY_URL }}" | sed 's/\/$//')
+          
+          # 1. Envio do relatório Gitleaks (A action salva como 'results.sarif' no diretório se não limpar)
+          if [ -f results.sarif ]; then
+            echo "Enviando resultados do Gitleaks..."
+            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools" \
               -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
-              -F "file=@gitleaks-results.sarif"
+              -F "file=@results.sarif"
           fi
 
-          # Envio do relatório Semgrep se existir
+          # 2. Envio do relatório Semgrep (O log mostrou que gerou 3 findings com sucesso!)
           if [ -f semgrep-results.sarif ]; then
-            curl -X POST "${{ secrets.FARADAY_URL }}/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools" \
+            echo "Enviando resultados do Semgrep..."
+            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools" \
               -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
               -F "file=@semgrep-results.sarif"
           fi
           
-          # Envio do relatório Trivy se existir
+          # 3. Envio do relatório Trivy
           if [ -f trivy-results.sarif ]; then
-            curl -X POST "${{ secrets.FARADAY_URL }}/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools" \
+            echo "Enviando resultados do Trivy..."
+            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools" \
               -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
               -F "file=@trivy-results.sarif"
           fi
