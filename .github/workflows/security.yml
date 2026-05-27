@@ -54,11 +54,11 @@ jobs:
         run: |
           echo "Enviando os relatórios para o painel central do Faraday via API..."
           
-          # Remove qualquer barra no final para padronizar a montagem da URL
+          # Remove qualquer barra no final para evitar duplicidade na concatenação
           BASE_URL=$(echo "${{ secrets.FARADAY_URL }}" | sed 's/\/$//')
           
-          # Endpoint dedicado para importação de relatórios de ferramentas (Tool Reports)
-          ENDPOINT="/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/tool_report"
+          # Endpoint padrão de upload de relatórios do Faraday v2
+          ENDPOINT="/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/upload_report"
           
           # 1. Envio do relatório Gitleaks
           if [ -f results.sarif ]; then
