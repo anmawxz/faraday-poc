@@ -48,27 +48,27 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'HIGH,CRITICAL'
 
-      # 4. CENTRALIZAÇÃO - Upload dos resultados SARIF para o Faraday via Basic Auth
+      # 4. CENTRALIZAÇÃO - Upload dos resultados SARIF para o Faraday via API
       - name: Consolidate & Upload SARIF Reports to Faraday Platform
         if: always()
         run: |
           echo "Enviando os relatórios para o painel central do Faraday via API..."
           
-          # Remove barras duplicadas da URL caso a secret termine com '/'
+          # Garante que a URL base não termine com barra para evitar double-slash interno
           BASE_URL=$(echo "${{ secrets.FARADAY_URL }}" | sed 's/\/$//')
           
-          # 1. Envio do relatório Gitleaks (A action salva como 'results.sarif' no diretório se não limpar)
+          # 1. Envio do relatório Gitleaks
           if [ -f results.sarif ]; then
             echo "Enviando resultados do Gitleaks..."
-            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools" \
+            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/vulnerability/" \
               -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
               -F "file=@results.sarif"
           fi
 
-          # 2. Envio do relatório Semgrep (O log mostrou que gerou 3 findings com sucesso!)
+          # 2. Envio do relatório Semgrep
           if [ -f semgrep-results.sarif ]; then
             echo "Enviando resultados do Semgrep..."
-            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools" \
+            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/vulnerability/" \
               -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
               -F "file=@semgrep-results.sarif"
           fi
@@ -76,7 +76,7 @@ jobs:
           # 3. Envio do relatório Trivy
           if [ -f trivy-results.sarif ]; then
             echo "Enviando resultados do Trivy..."
-            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/processing_tools" \
+            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/vulnerability/" \
               -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
               -F "file=@trivy-results.sarif"
           fi
