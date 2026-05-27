@@ -54,29 +54,35 @@ jobs:
         run: |
           echo "Enviando os relatórios para o painel central do Faraday via API..."
           
-          # Garante que a URL base não termine com barra para evitar double-slash interno
+          # Remove qualquer barra no final para padronizar a montagem da URL
           BASE_URL=$(echo "${{ secrets.FARADAY_URL }}" | sed 's/\/$//')
+          
+          # Endpoint dedicado para importação de relatórios de ferramentas (Tool Reports)
+          ENDPOINT="/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/tool_report"
           
           # 1. Envio do relatório Gitleaks
           if [ -f results.sarif ]; then
             echo "Enviando resultados do Gitleaks..."
-            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/vulnerability/" \
+            curl -X POST "${BASE_URL}${ENDPOINT}" \
               -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
+              -H "Accept: application/json" \
               -F "file=@results.sarif"
           fi
 
           # 2. Envio do relatório Semgrep
           if [ -f semgrep-results.sarif ]; then
             echo "Enviando resultados do Semgrep..."
-            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/vulnerability/" \
+            curl -X POST "${BASE_URL}${ENDPOINT}" \
               -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
+              -H "Accept: application/json" \
               -F "file=@semgrep-results.sarif"
           fi
           
           # 3. Envio do relatório Trivy
           if [ -f trivy-results.sarif ]; then
             echo "Enviando resultados do Trivy..."
-            curl -X POST "$BASE_URL/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/vulnerability/" \
+            curl -X POST "${BASE_URL}${ENDPOINT}" \
               -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
+              -H "Accept: application/json" \
               -F "file=@trivy-results.sarif"
           fi
