@@ -48,7 +48,7 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'HIGH,CRITICAL'
 
-      # 4. CENTRALIZAÇÃO - Upload corrigido seguindo a ordem estrita de argumentos da CLI
+      # 4. CENTRALIZAÇÃO - Upload corrigido utilizando o comando 'tool report' nativo
       - name: Consolidate & Upload SARIF Reports to Faraday Platform
         if: always()
         run: |
@@ -66,26 +66,23 @@ jobs:
           # Importando Gitleaks
           if [ -f results.sarif ]; then
             echo "Importando Gitleaks para o Faraday..."
-            faraday-cli tool run \
+            faraday-cli tool report \
               --workspace "${{ secrets.FARADAY_WORKSPACE }}" \
-              -r results.sarif \
-              "gitleaks"
+              --report results.sarif
           fi
 
           # Importando Semgrep
           if [ -f semgrep-results.sarif ]; then
             echo "Importando Semgrep para o Faraday..."
-            faraday-cli tool run \
+            faraday-cli tool report \
               --workspace "${{ secrets.FARADAY_WORKSPACE }}" \
-              -r semgrep-results.sarif \
-              "semgrep"
+              --report semgrep-results.sarif
           fi
 
           # Importando Trivy
           if [ -f trivy-results.sarif ]; then
             echo "Importando Trivy para o Faraday..."
-            faraday-cli tool run \
+            faraday-cli tool report \
               --workspace "${{ secrets.FARADAY_WORKSPACE }}" \
-              -r trivy-results.sarif \
-              "trivy"
+              --report trivy-results.sarif
           fi
