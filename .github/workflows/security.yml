@@ -48,20 +48,23 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'HIGH,CRITICAL'
 
-      # 4. CENTRALIZAÇÃO - Upload usando faraday-cli integrado à edição Community
+      # 4. CENTRALIZAÇÃO - Upload usando faraday-cli com a sintaxe correta
       - name: Consolidate & Upload SARIF Reports to Faraday Platform
         if: always()
         run: |
           echo "Instalando faraday-cli e enviando relatórios..."
           python3 -m pip install faraday-cli
 
-          # Configura e autentica a CLI usando seus secrets
-          faraday-cli auth \
-            --url "${{ secrets.FARADAY_URL }}" \
-            --username "faraday" \
-            --password "${{ secrets.FARADAY_PASSWORD }}"
+          # Remove barra no final da URL se houver
+          BASE_URL=$(echo "${{ secrets.FARADAY_URL }}" | sed 's/\/$//')
 
-          # Faz o upload associando os arquivos SARIF diretamente ao Workspace do projeto
+          # Autenticação com os parâmetros corrigidos de acordo com a CLI (-f, -u, -p)
+          faraday-cli auth \
+            -f "$BASE_URL" \
+            -u "faraday" \
+            -p "${{ secrets.FARADAY_PASSWORD }}"
+
+          # Garante que os relatórios existem e faz o upload para o workspace criado
           if [ -f results.sarif ]; then
             echo "Importando Gitleaks para o Faraday..."
             faraday-cli tool run "results.sarif" --workspace "${{ secrets.FARADAY_WORKSPACE }}"
