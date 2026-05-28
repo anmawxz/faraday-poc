@@ -1,9 +1,16 @@
 {
   "name": "poc-vulnerable-app",
   "version": "1.0.0",
-  "description": "App para teste de DevSecOps",
-  "main": "index.js",
+  "description": "App propositalmente vulneravel para POC de DevSecOps",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
   "dependencies": {
-    "express": "4.16.0" 
+    "express": "4.16.0",
+    "lodash": "4.17.4",
+    "js-yaml": "3.10.0",
+    "axios": "0.21.1",
+    "jsonwebtoken": "8.5.1"
   }
 }
