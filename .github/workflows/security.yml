@@ -48,34 +48,41 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'HIGH,CRITICAL'
 
-      # 4. CENTRALIZAÇÃO - Upload usando faraday-cli com a sintaxe correta
+      # 4. CENTRALIZAÇÃO - Upload usando faraday-cli com mapeamento de plugins
       - name: Consolidate & Upload SARIF Reports to Faraday Platform
         if: always()
         run: |
           echo "Instalando faraday-cli e enviando relatórios..."
           python3 -m pip install faraday-cli
 
-          # Remove barra no final da URL se houver
           BASE_URL=$(echo "${{ secrets.FARADAY_URL }}" | sed 's/\/$//')
 
-          # Autenticação com os parâmetros corrigidos de acordo com a CLI (-f, -u, -p)
+          # Autenticação (Já validada)
           faraday-cli auth \
             -f "$BASE_URL" \
             -u "faraday" \
             -p "${{ secrets.FARADAY_PASSWORD }}"
 
-          # Garante que os relatórios existem e faz o upload para o workspace criado
+          # Importando Gitleaks usando o plugin genérico de SARIF do Faraday
           if [ -f results.sarif ]; then
             echo "Importando Gitleaks para o Faraday..."
-            faraday-cli tool run "results.sarif" --workspace "${{ secrets.FARADAY_WORKSPACE }}"
+            faraday-cli tool run "Gitleaks Scan" \
+              --workspace "${{ secrets.FARADAY_WORKSPACE }}" \
+              -r results.sarif
           fi
 
+          # Importando Semgrep usando o plugin genérico de SARIF do Faraday
           if [ -f semgrep-results.sarif ]; then
             echo "Importando Semgrep para o Faraday..."
-            faraday-cli tool run "semgrep-results.sarif" --workspace "${{ secrets.FARADAY_WORKSPACE }}"
+            faraday-cli tool run "Semgrep Scan" \
+              --workspace "${{ secrets.FARADAY_WORKSPACE }}" \
+              -r semgrep-results.sarif
           fi
 
+          # Importando Trivy
           if [ -f trivy-results.sarif ]; then
             echo "Importando Trivy para o Faraday..."
-            faraday-cli tool run "trivy-results.sarif" --workspace "${{ secrets.FARADAY_WORKSPACE }}"
+            faraday-cli tool run "Trivy Scan" \
+              --workspace "${{ secrets.FARADAY_WORKSPACE }}" \
+              -r trivy-results.sarif
           fi
