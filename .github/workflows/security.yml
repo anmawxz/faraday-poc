@@ -48,41 +48,31 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'HIGH,CRITICAL'
 
-      # 4. CENTRALIZAÇÃO - Upload dos resultados SARIF para o Faraday via API
+      # 4. CENTRALIZAÇÃO - Upload usando faraday-cli integrado à edição Community
       - name: Consolidate & Upload SARIF Reports to Faraday Platform
         if: always()
         run: |
-          echo "Enviando os relatórios para o painel central do Faraday via API..."
-          
-          # Remove qualquer barra no final para evitar duplicidade na concatenação
-          BASE_URL=$(echo "${{ secrets.FARADAY_URL }}" | sed 's/\/$//')
-          
-          # Endpoint padrão de upload de relatórios do Faraday v2
-          ENDPOINT="/_api/v2/ws/${{ secrets.FARADAY_WORKSPACE }}/upload_report"
-          
-          # 1. Envio do relatório Gitleaks
+          echo "Instalando faraday-cli e enviando relatórios..."
+          python3 -m pip install faraday-cli
+
+          # Configura e autentica a CLI usando seus secrets
+          faraday-cli auth \
+            --url "${{ secrets.FARADAY_URL }}" \
+            --username "faraday" \
+            --password "${{ secrets.FARADAY_PASSWORD }}"
+
+          # Faz o upload associando os arquivos SARIF diretamente ao Workspace do projeto
           if [ -f results.sarif ]; then
-            echo "Enviando resultados do Gitleaks..."
-            curl -X POST "${BASE_URL}${ENDPOINT}" \
-              -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
-              -H "Accept: application/json" \
-              -F "file=@results.sarif"
+            echo "Importando Gitleaks para o Faraday..."
+            faraday-cli tool run "results.sarif" --workspace "${{ secrets.FARADAY_WORKSPACE }}"
           fi
 
-          # 2. Envio do relatório Semgrep
           if [ -f semgrep-results.sarif ]; then
-            echo "Enviando resultados do Semgrep..."
-            curl -X POST "${BASE_URL}${ENDPOINT}" \
-              -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
-              -H "Accept: application/json" \
-              -F "file=@semgrep-results.sarif"
+            echo "Importando Semgrep para o Faraday..."
+            faraday-cli tool run "semgrep-results.sarif" --workspace "${{ secrets.FARADAY_WORKSPACE }}"
           fi
-          
-          # 3. Envio do relatório Trivy
+
           if [ -f trivy-results.sarif ]; then
-            echo "Enviando resultados do Trivy..."
-            curl -X POST "${BASE_URL}${ENDPOINT}" \
-              -H "Authorization: ${{ secrets.FARADAY_AUTH }}" \
-              -H "Accept: application/json" \
-              -F "file=@trivy-results.sarif"
+            echo "Importando Trivy para o Faraday..."
+            faraday-cli tool run "trivy-results.sarif" --workspace "${{ secrets.FARADAY_WORKSPACE }}"
           fi
