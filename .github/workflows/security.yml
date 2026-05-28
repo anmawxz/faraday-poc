@@ -48,7 +48,7 @@ jobs:
           output: 'trivy-results.sarif'
           severity: 'HIGH,CRITICAL'
 
-      # 4. CENTRALIZAÇÃO - Upload usando faraday-cli com mapeamento de plugins
+      # 4. CENTRALIZAÇÃO - Upload usando faraday-cli tool report
       - name: Consolidate & Upload SARIF Reports to Faraday Platform
         if: always()
         run: |
@@ -57,24 +57,24 @@ jobs:
 
           BASE_URL=$(echo "${{ secrets.FARADAY_URL }}" | sed 's/\/$//')
 
-          # Autenticação (Já validada)
+          # Autenticação
           faraday-cli auth \
             -f "$BASE_URL" \
             -u "faraday" \
             -p "${{ secrets.FARADAY_PASSWORD }}"
 
-          # Importando Gitleaks usando o plugin genérico de SARIF do Faraday
+          # Importando Gitleaks usando a ação correta 'tool report'
           if [ -f results.sarif ]; then
             echo "Importando Gitleaks para o Faraday..."
-            faraday-cli tool run "Gitleaks Scan" \
+            faraday-cli tool report \
               --workspace "${{ secrets.FARADAY_WORKSPACE }}" \
               -r results.sarif
           fi
 
-          # Importando Semgrep usando o plugin genérico de SARIF do Faraday
+          # Importando Semgrep
           if [ -f semgrep-results.sarif ]; then
             echo "Importando Semgrep para o Faraday..."
-            faraday-cli tool run "Semgrep Scan" \
+            faraday-cli tool report \
               --workspace "${{ secrets.FARADAY_WORKSPACE }}" \
               -r semgrep-results.sarif
           fi
@@ -82,7 +82,7 @@ jobs:
           # Importando Trivy
           if [ -f trivy-results.sarif ]; then
             echo "Importando Trivy para o Faraday..."
-            faraday-cli tool run "Trivy Scan" \
+            faraday-cli tool report \
               --workspace "${{ secrets.FARADAY_WORKSPACE }}" \
               -r trivy-results.sarif
           fi
